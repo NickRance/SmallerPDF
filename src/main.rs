@@ -1,4 +1,10 @@
-use std::{env, ffi::OsStr, path::{PathBuf, Path}, process::Command};
+use std::option::Option;
+use std::{
+    env,
+    ffi::OsStr,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 fn main() {
     let Some(file_path): Option<PathBuf> = env::args().nth(1).map(Into::into) else {
@@ -41,6 +47,8 @@ fn main() {
     }
 
     let _before_size = file_path.metadata().unwrap().len() as f32;
+    let _outpath_str = modify_output_path(file_path.to_str().unwrap_or(""));
+    let _output_path = Path::new(&_outpath_str);
 
     if let Err(e) = Command::new("gs")
         .arg("-dBATCH")
@@ -50,7 +58,7 @@ fn main() {
         .arg("-dPDFSETTINGS=/screen")
         .arg(format!("-r{}", _image_resolution))
         .arg("-sDEVICE=pdfwrite")
-        .arg("-sOutputFile=output.pdf")
+        .arg(format!("-sOutputFile={}", &_outpath_str))
         .arg(&file_path)
         .output()
     {
@@ -58,10 +66,19 @@ fn main() {
         return;
     }
 
-    println!("Result saved in output.pdf!");
+    println!("Result saved in {}!", &_outpath_str);
 
-    let _output_path = Path::new("output.pdf");
     let _after_size = _output_path.metadata().unwrap().len() as f32;
 
-    println!("File size changes: {:.2}MB -> {:.2}MB", _before_size / 1000000.0, _after_size / 1000000.0);
+    println!(
+        "File size changes: {:.2}MB -> {:.2}MB",
+        _before_size / 1000000.0,
+        _after_size / 1000000.0
+    );
+}
+
+fn modify_output_path(input_path: &str) -> String {
+    let mut output_path = String::from(input_path);
+    output_path.insert_str(output_path.len() - 4, "_compressed");
+    output_path
 }
